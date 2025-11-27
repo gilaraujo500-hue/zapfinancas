@@ -1,15 +1,49 @@
+from flask import Flask, request, jsonify
+import requests
+from datetime import datetime, timedelta
+import openai
+import os
+from flask_sqlalchemy import SQLAlchemy
+import json
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+openai.api_key = os.environ.get('OPENAI_API_KEY')
+
+# Token do Whapi (tu já tens no Railway)
+WHAPI_TOKEN = os.environ.get('WHAPI_TOKEN')
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phone = db.Column(db.String(30), unique=True)
+    trial_end = db.Column(db.DateTime)
+    paid = db.Column(db.Boolean, default=False)
+
+class Transaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer)
+    value = db.Column(db.Float)
+    description = db.Column(db.String(200))
+    category = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+with app.app_context():
+    db.create_all()
+
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp():
     data = request.get_json()
 
-    # Extrai número e texto do formato do Whapi
+    # Whapi envia assim
     try:
         phone = data['chats_updates'][0]['after_update']['id'].split('@')[0]
         text = data['chats_updates'][0]['after_update']['last_message']['text']['body'].lower()
     except:
         return jsonify({}), 200
 
-    # Resto do código exatamente como antes
     user = User.query.filter_by(phone=phone).first()
     if not user:
         user = User(phone=phone, trial_end=datetime.utcnow() + timedelta(days=3))
@@ -41,3 +75,26 @@ Total do mês: R$ {total:.2f}"""
 
     send_message(phone, reply)
     return jsonify({}), 200
+
+def process_text(text):
+    prompt = f"""Extraia APENAS em JSON válido: valor, descrição e categoria (Alimentação/Transporte/Lazer/Saúde/Moradia/Outros) do texto: "{text}"
+Formato: {{"value": 0.0, "desc": "string", "cat": "string"}}
+Se não for gasto, retorne null."""
+    try:
+        resp = openai.ChatCompletion.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}], temperature=0)
+        json_str = resp.choices[0].message.content.strip()
+        if json_str == "null":
+            return None
+        data = json.loads(json_str)
+        data['value'] = float(data['value'])
+        return data
+    except:
+        return None
+
+def send_message(phone, message):
+    url = f"https://gate.whapi.cloud/sendMessage?token={WHAPI_TOKEN}"
+    payload = {"chatId": phone, "text": message}
+    requests.post(url, json=payload)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
