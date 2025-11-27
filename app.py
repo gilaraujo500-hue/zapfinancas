@@ -35,6 +35,7 @@ with app.app_context():
 def whatsapp():
     data = request.get_json()
 
+    # Extrai do formato do Whapi (chats_updates)
     try:
         phone = data['chats_updates'][0]['after_update']['id'].split('@')[0]
         text = data['chats_updates'][0]['after_update']['last_message']['text']['body'].lower()
@@ -88,22 +89,15 @@ Formato: {{"value": 0.0, "desc": "string", "cat": "string"}}"""
         return None
 
 def send_message(phone, message):
-    # Garante que chatId seja string no formato exato do Whapi
-    clean_phone = str(phone).replace("+", "").replace("whatsapp:", "").replace("@s.whatsapp.net", "")
-    chat_id = f"{clean_phone}@c.us"
+    # Formato EXATO do Whapi: phone@c.us
+    chat_id = f"{phone}@c.us"
     url = f"https://gate.whapi.cloud/sendMessage?token={WHAPI_TOKEN}"
-    payload = {
-        "chatId": chat_id,
-        "text": str(message)
-    }
+    payload = {"chatId": chat_id, "text": message}
     try:
         response = requests.post(url, json=payload, timeout=10)
-        print(f"Whapi response: {response.status_code} {response.text}")
+        print(f"Whapi status: {response.status_code}")
     except Exception as e:
         print(f"Erro envio: {e}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-
-
