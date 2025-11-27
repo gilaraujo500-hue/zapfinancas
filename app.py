@@ -92,7 +92,7 @@ Se não for gasto, retorne null."""
 def send_message(phone, message):
     url = f"https://gate.whapi.cloud/sendMessage?token={WHAPI_TOKEN}"
     payload = {
-        "chatId": phone,
+        "chatId": phone.replace("+", "").replace("whatsapp:", ""),
         "text": message
     }
     try:
