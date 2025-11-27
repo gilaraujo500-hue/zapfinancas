@@ -91,13 +91,16 @@ Se não for gasto, retorne null."""
         return None
 
 def send_message(phone, message):
+    # Limpa o número para o formato que o Z-API aceita
+    clean_phone = phone.replace("whatsapp:", "").replace("+", "").replace("-", "").replace(" ", "")
     url = f"https://api.z-api.io/instances/{Z_API_INSTANCE}/token/{Z_API_TOKEN}/send-text"
     payload = {
-        "phone": phone.replace("+", "").replace("whatsapp:", ""),
+        "phone": clean_phone,
         "message": message
     }
-    requests.post(url, json=payload)
+    try:
+        requests.post(url, json=payload, timeout=10)
+    except:
+        pass  # não trava se o Z-API cair por 1 segundo
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
 
