@@ -88,15 +88,20 @@ Formato: {{"value": 0.0, "desc": "string", "cat": "string"}}"""
         return None
 
 def send_message(phone, message):
-    # Formato EXATO que o Whapi aceita
-    chat_id = f"55{phone}@c.us"  # ← FORÇA o 55 na frente
+    # FORÇA o formato EXATO que o Whapi aceita em 2025
+    clean_phone = phone.replace("+", "").replace("whatsapp:", "").replace("@s.whatsapp.net", "")
+    if clean_phone.startswith("55") and len(clean_phone) == 13:  # já tem 55 + 11 dígitos
+        chat_id = f"{clean_phone}@c.us"
+    else:
+        chat_id = f"55{clean_phone.lstrip('0')}@c.us"  # garante 55 + 11 dígitos
     url = f"https://gate.whapi.cloud/sendMessage?token={WHAPI_TOKEN}"
     payload = {"chatId": chat_id, "text": message}
     try:
         requests.post(url, json=payload, timeout=10)
-    except:
-        pass
+    except Exception as e:
+        print(f"Erro ao enviar: {e}")  # para debug
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 
