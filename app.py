@@ -12,9 +12,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 openai.api_key = os.environ.get('OPENAI_API_KEY')
-
-# Token do Whapi (tu já tens no Railway)
-WHAPI_TOKEN = os.environ.get('WHAPI_TOKEN')
+WHAPI_TOKEN = os.environ.get('WHAPI_TOKEN')  # teu token do Whapi
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -37,7 +35,6 @@ with app.app_context():
 def whatsapp():
     data = request.get_json()
 
-    # Whapi envia assim
     try:
         phone = data['chats_updates'][0]['after_update']['id'].split('@')[0]
         text = data['chats_updates'][0]['after_update']['last_message']['text']['body'].lower()
@@ -77,9 +74,8 @@ Total do mês: R$ {total:.2f}"""
     return jsonify({}), 200
 
 def process_text(text):
-    prompt = f"""Extraia APENAS em JSON válido: valor, descrição e categoria (Alimentação/Transporte/Lazer/Saúde/Moradia/Outros) do texto: "{text}"
-Formato: {{"value": 0.0, "desc": "string", "cat": "string"}}
-Se não for gasto, retorne null."""
+    prompt = f"""Extraia APENAS em JSON: valor, descrição e categoria (Alimentação/Transporte/Lazer/Saúde/Moradia/Outros) do texto: "{text}"
+Formato: {{"value": 0.0, "desc": "string", "cat": "string"}}"""
     try:
         resp = openai.ChatCompletion.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}], temperature=0)
         json_str = resp.choices[0].message.content.strip()
@@ -92,9 +88,13 @@ Se não for gasto, retorne null."""
         return None
 
 def send_message(phone, message):
+    chat_id = f"{phone}@c.us"  # ← ESSA LINHA É OBRIGATÓRIA NO WHAPI
     url = f"https://gate.whapi.cloud/sendMessage?token={WHAPI_TOKEN}"
-    payload = {"chatId": phone, "text": message}
-    requests.post(url, json=payload)
+    payload = {"chatId": chat_id, "text": message}
+    try:
+        requests.post(url, json=payload, timeout=10)
+    except:
+        pass
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
