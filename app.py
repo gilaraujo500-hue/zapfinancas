@@ -88,7 +88,8 @@ Formato: {{"value": 0.0, "desc": "string", "cat": "string"}}"""
         return None
 
 def send_message(phone, message):
-    chat_id = f"{phone}@c.us"  # ← ESSA LINHA É OBRIGATÓRIA NO WHAPI
+    # Formato EXATO que o Whapi aceita
+    chat_id = f"55{phone}@c.us"  # ← FORÇA o 55 na frente
     url = f"https://gate.whapi.cloud/sendMessage?token={WHAPI_TOKEN}"
     payload = {"chatId": chat_id, "text": message}
     try:
@@ -98,3 +99,4 @@ def send_message(phone, message):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
