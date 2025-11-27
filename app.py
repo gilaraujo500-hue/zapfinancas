@@ -93,10 +93,11 @@ Se não for gasto, retorne null."""
 def send_message(phone, message):
     url = f"https://api.z-api.io/instances/{Z_API_INSTANCE}/token/{Z_API_TOKEN}/send-text"
     payload = {
-        "phone": phone,
+        "phone": phone.replace("+", "").replace("whatsapp:", ""),
         "message": message
     }
     requests.post(url, json=payload)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
