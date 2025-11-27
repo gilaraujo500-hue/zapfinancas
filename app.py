@@ -13,9 +13,8 @@ db = SQLAlchemy(app)
 
 openai.api_key = os.environ.get('OPENAI_API_KEY')
 
-# Credenciais do Z-API (adiciona no Railway)
-Z_API_INSTANCE = os.environ.get('Z_API_INSTANCE')  # Ex: 3ADCB2F0...
-Z_API_TOKEN = os.environ.get('Z_API_TOKEN')  # Ex: 68FB0810...
+# Credenciais do Whapi (adiciona no Railway)
+WHAPI_TOKEN = os.environ.get('WHAPI_TOKEN')  # Teu token do Whapi (UEN7YQBKZ2HBVIMY93G5X)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -37,8 +36,8 @@ with app.app_context():
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp():
     data = request.get_json()
-    phone = data.get('phone', '')
-    text = data.get('message', {}).get('text', '').lower()
+    phone = data.get('chatId', '') or data.get('phone', '')  # Whapi usa chatId ou phone
+    text = data.get('text', '') or data.get('message', {}).get('text', '').lower()
 
     if not phone or not text:
         return jsonify({}), 200
@@ -91,16 +90,15 @@ Se não for gasto, retorne null."""
         return None
 
 def send_message(phone, message):
-    # Limpa o número para o formato que o Z-API aceita
-    clean_phone = phone.replace("whatsapp:", "").replace("+", "").replace("-", "").replace(" ", "")
-    url = f"https://api.z-api.io/instances/{Z_API_INSTANCE}/token/{Z_API_TOKEN}/send-text"
+    url = f"https://gate.whapi.cloud/sendMessage?token={WHAPI_TOKEN}"
     payload = {
-        "phone": clean_phone,
-        "message": message
+        "chatId": phone,
+        "text": message
     }
     try:
         requests.post(url, json=payload, timeout=10)
     except:
-        pass  # não trava se o Z-API cair por 1 segundo
+        pass  # Não trava se falhar
 
-
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
